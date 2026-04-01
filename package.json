@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "test": "tsc --project tsconfig.test.json --noEmit && node --import tsx/esm --test 'test/**/*.test.ts'",
     "start": "node dist/index.js",
     "start:http": "TRANSPORT=http node dist/index.js",
     "start:sse": "TRANSPORT=sse node dist/index.js",
