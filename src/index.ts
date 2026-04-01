@@ -5,6 +5,10 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+// SSEServerTransport is intentionally kept for the legacy MCP 2024-11-05 SSE transport mode.
+// There is no non-deprecated alternative for this protocol; StreamableHTTPServerTransport
+// implements a different (newer) protocol and cannot replace it for older clients.
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
@@ -56,32 +60,37 @@ try {
 function createServer(): McpServer {
   const server = new McpServer({ name: "kb", version: "1.0.0" });
 
-  server.tool(
+  server.registerTool(
     "kb_list_keywords",
-    `ALWAYS call this tool first before any other KB tool.
-Returns every keyword available in the knowledge base, plus a required 3-step
-workflow you must follow:
-  Step 1 — kb_list_keywords            (this tool) discover available keywords
-  Step 2 — kb_list_frontmatter_by_keywords   narrow down to relevant files
-  Step 3 — kb_read_file                load the full content of a chosen file
-Do NOT skip steps or call kb_read_file without first completing steps 1 and 2.`,
-    {},
+    {
+      description:
+        `ALWAYS call this tool first before any other KB tool.\n` +
+        `Returns every keyword available in the knowledge base, plus a required 3-step\n` +
+        `workflow you must follow:\n` +
+        `  Step 1 — kb_list_keywords            (this tool) discover available keywords\n` +
+        `  Step 2 — kb_list_frontmatter_by_keywords   narrow down to relevant files\n` +
+        `  Step 3 — kb_read_file                load the full content of a chosen file\n` +
+        `Do NOT skip steps or call kb_read_file without first completing steps 1 and 2.`,
+    },
     async () => {
       const text = formatAllKeywords(index);
       return { content: [{ type: "text", text }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     "kb_list_frontmatter_by_keywords",
-    `Step 2 of the required KB workflow. Call this after kb_list_keywords.
-Accepts one or more keywords and returns the title, file path, and read_when
-triggers of every KB file that matches at least one keyword.
-Use the returned file paths with kb_read_file to load the full content.`,
     {
-      keywords: z
-        .array(z.string())
-        .describe("One or more keywords from kb_list_keywords to filter KB entries"),
+      description:
+        `Step 2 of the required KB workflow. Call this after kb_list_keywords.\n` +
+        `Accepts one or more keywords and returns the title, file path, and read_when\n` +
+        `triggers of every KB file that matches at least one keyword.\n` +
+        `Use the returned file paths with kb_read_file to load the full content.`,
+      inputSchema: {
+        keywords: z
+          .array(z.string())
+          .describe("One or more keywords from kb_list_keywords to filter KB entries"),
+      },
     },
     async ({ keywords }) => {
       const text = formatEntriesByKeywords(index, keywords);
@@ -89,16 +98,19 @@ Use the returned file paths with kb_read_file to load the full content.`,
     },
   );
 
-  server.tool(
+  server.registerTool(
     "kb_read_file",
-    `Step 3 of the required KB workflow. Call this after kb_list_frontmatter_by_keywords.
-Loads the complete markdown content of a single KB file by its relative filename.
-Only the frontmatter and body of the requested file are returned — no index data —
-keeping token usage minimal.`,
     {
-      filename: z
-        .string()
-        .describe("Relative filename of the KB file as returned by kb_list_frontmatter_by_keywords (e.g. api-design.md)"),
+      description:
+        `Step 3 of the required KB workflow. Call this after kb_list_frontmatter_by_keywords.\n` +
+        `Loads the complete markdown content of a single KB file by its relative filename.\n` +
+        `Only the frontmatter and body of the requested file are returned — no index data —\n` +
+        `keeping token usage minimal.`,
+      inputSchema: {
+        filename: z
+          .string()
+          .describe("Relative filename of the KB file as returned by kb_list_frontmatter_by_keywords (e.g. api-design.md)"),
+      },
     },
     async ({ filename }) => {
       const sanitized = filename.replace(/\.\./g, "").replace(/\\/g, "/");
