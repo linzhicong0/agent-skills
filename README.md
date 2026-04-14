@@ -145,6 +145,27 @@ layer: backend
 
 ## Setup
 
+### Quick install (global executable)
+
+```bash
+# macOS / Linux
+./install.sh
+
+# Windows
+install.bat
+```
+
+This installs dependencies, builds the project, and links `mcp-kb-server` as a global command. After installing:
+
+```bash
+KB_DIR=/path/to/your/kb mcp-kb-server          # stdio (default)
+KB_DIR=/path/to/your/kb mcp-kb-server          # works anywhere after install
+```
+
+To uninstall: `npm unlink -g mcp-kb-server`
+
+### Manual install
+
 ```bash
 npm install
 npm run build
