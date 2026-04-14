@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "MCP Knowledge Base Server — paginated frontmatter search for Claude Code",
   "type": "module",
+  "bin": {
+    "mcp-kb-server": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "tsc --project tsconfig.test.json --noEmit && node --import tsx/esm --test 'test/**/*.test.ts'",
